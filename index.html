@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ECONOMY LAB — EDUCACIÓN FINANCIERA</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Rajdhani (Sci-Fi/Tech) e Inter (Legibilidad) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Tone.js para Sonidos Sintetizados Interactivos -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <style>
+        :root {
+            --neon-green: #22c55e;
+            --neon-gold: #fbbf24;
+            --neon-emerald: #10b981;
+            --neon-cyan: #06b6d4;
+            --neon-orange: #f97316;
+            --dark-bg: #040806;
+        }
+
+        body {
+            background-color: var(--dark-bg);
+            color: white;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden; 
+            user-select: none; 
+            perspective: 1000px;
+        }
+
+        h1, h2, h3, .font-sci { font-family: 'Rajdhani', sans-serif; }
+
+        /* Glassmorphism para los paneles */
+        .glass-panel {
+            background: rgba(11, 20, 14, 0.65);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(34, 197, 94, 0.2);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(34, 197, 94, 0.05);
+        }
+
+        /* Opciones con Efecto 3D (Tilt) */
+        .option-card {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: background 0.3s, border-color 0.3s, box-shadow 0.3s, transform 0.1s;
+            cursor: pointer;
+            transform-style: preserve-3d;
+        }
+
+        .option-content {
+            transform: translateZ(20px); 
+            transition: all 0.3s;
+        }
+
+        .option-card:hover {
+            border-color: var(--neon-gold);
+            box-shadow: 0 10px 30px rgba(251, 191, 36, 0.3), inset 0 0 15px rgba(251, 191, 36, 0.2);
+            background: rgba(20, 30, 20, 0.85);
+            z-index: 10;
+        }
+
+        .option-card.selected-correct {
+            background: rgba(34, 197, 94, 0.25) !important;
+            border-color: #22c55e !important;
+            box-shadow: 0 0 30px rgba(34, 197, 94, 0.6), inset 0 0 20px rgba(34, 197, 94, 0.4) !important;
+            transform: scale(1.02) rotateX(0) rotateY(0) !important; 
+        }
+
+        .option-card.selected-incorrect {
+            background: rgba(239, 68, 68, 0.25) !important;
+            border-color: #ef4444 !important;
+            box-shadow: 0 0 30px rgba(239, 68, 68, 0.6), inset 0 0 20px rgba(239, 68, 68, 0.4) !important;
+            transform: scale(0.98) rotateX(0) rotateY(0) !important;
+        }
+
+        .option-card.disabled {
+            pointer-events: none;
+            opacity: 0.3;
+            filter: grayscale(100%);
+            transform: scale(0.95) rotateX(0) rotateY(0) !important;
+            transition: all 0.4s ease;
+        }
+
+        /* Animaciones Neón */
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 15px rgba(34, 197, 94, 0.4); }
+            50% { box-shadow: 0 0 30px rgba(34, 197, 94, 0.8); }
+        }
+
+        .btn-neon {
+            background: transparent;
+            border: 2px solid var(--neon-green);
+            color: var(--neon-green);
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: pulse-glow 2s infinite;
+        }
+
+        .btn-neon:hover {
+            background: var(--neon-green);
+            color: var(--dark-bg);
+            box-shadow: 0 0 40px var(--neon-green);
+            transform: scale(1.05) translateY(-2px);
+        }
+
+        /* Efecto Racha (Streak) */
+        @keyframes fire-pulse {
+            0% { text-shadow: 0 0 10px #fbbf24, 0 0 20px #fbbf24; transform: scale(1); }
+            50% { text-shadow: 0 0 20px #fbbf24, 0 0 30px #f97316; transform: scale(1.1); }
+            100% { text-shadow: 0 0 10px #fbbf24, 0 0 20px #fbbf24; transform: scale(1); }
+        }
+        .streak-active { animation: fire-pulse 1s infinite; color: var(--neon-gold); }
+
+        /* Contenedor del Canvas Financiero Nativo */
+        #finance-canvas {
+            position: fixed; 
+            top: 0; left: 0; 
+            width: 100vw; height: 100vh; 
+            z-index: -5; 
+            pointer-events: none;
+            background: radial-gradient(circle at center, #0B1410 0%, #030504 100%);
+        }
+
+        /* ECONO-Bot */
+        #evo-bot-container {
+            position: fixed; bottom: 20px; right: 20px; z-index: 100;
+            display: flex; align-items: flex-end; transition: all 0.5s ease;
+        }
+        .robot-hover { animation: float-slow 3s ease-in-out infinite; }
+        @keyframes float-slow {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-15px); }
+        }
+
+        #speech-bubble {
+            background: rgba(11, 20, 14, 0.95);
+            border: 2px solid var(--neon-gold);
+            border-radius: 20px 20px 0 20px;
+            padding: 15px 20px; margin-right: 15px; margin-bottom: 30px;
+            max-width: 280px; box-shadow: 0 0 20px rgba(251, 191, 36, 0.4);
+            opacity: 0; transform: scale(0.8) translateY(20px);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform-origin: bottom right;
+        }
+        #speech-bubble.active { opacity: 1; transform: scale(1) translateY(0); }
+
+        .robot-eye { animation: blink 4s infinite; transform-origin: center; }
+        @keyframes blink { 0%, 96%, 98% { transform: scaleY(1); } 97% { transform: scaleY(0.1); } }
+
+        /* Manejo de Pantallas */
+        .screen { display: none; opacity: 0; transition: opacity 0.5s ease-out; }
+        .screen.active { display: flex; opacity: 1; animation: slideUpFade 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+        @keyframes slideUpFade {
+            from { opacity: 0; transform: translateY(60px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .scramble-text { font-family: 'Rajdhani', monospace; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="w-screen h-screen flex flex-col relative text-gray-100">
+
+    <!-- Fondo Nativo Canvas Financiero -->
+    <canvas id="finance-canvas"></canvas>
+
+    <!-- ROBOT ECONO-BOT -->
+    <div id="evo-bot-container">
+        <div id="speech-bubble" class="font-sci text-green-100 text-lg tracking-wide">
+            ¡Iniciando cálculos financieros!
+        </div>
+        <div class="robot-hover cursor-pointer" onclick="evoBot.poke()">
+            <svg width="100" height="120" viewBox="0 0 100 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <line x1="50" y1="30" x2="50" y2="10" stroke="#fbbf24" stroke-width="4"/>
+                <circle cx="50" cy="8" r="6" fill="#fbbf24" class="animate-pulse"/>
+                <rect x="20" y="30" width="60" height="50" rx="15" fill="#1e293b" stroke="#22c55e" stroke-width="3"/>
+                <rect x="28" y="40" width="44" height="25" rx="5" fill="#0B1410" stroke="#10b981" stroke-width="2"/>
+                <g id="robot-eyes">
+                    <rect x="35" y="48" width="10" height="8" rx="2" fill="#fbbf24" class="robot-eye" style="box-shadow: 0 0 10px #fbbf24;"/>
+                    <rect x="55" y="48" width="10" height="8" rx="2" fill="#fbbf24" class="robot-eye" style="box-shadow: 0 0 10px #fbbf24;"/>
+                </g>
+                <path d="M 30 80 L 70 80 L 80 110 L 20 110 Z" fill="#1e293b" stroke="#22c55e" stroke-width="3"/>
+                <circle cx="50" cy="95" r="10" fill="#fbbf24" class="animate-pulse"/>
+                <text x="50" y="100" fill="#1e293b" font-size="12" font-weight="bold" font-family="Arial" text-anchor="middle">$</text>
+            </svg>
+        </div>
+    </div>
+
+    <!-- PANTALLA INICIAL -->
+    <div id="screen-intro" class="screen active flex-col items-center justify-center w-full h-full p-8 z-10 text-center">
+        <div class="glass-panel p-12 rounded-3xl max-w-4xl w-full flex flex-col items-center relative overflow-hidden transition-transform duration-700 hover:scale-[1.02]">
+            
+            <div class="relative w-32 h-32 mb-6 mt-4">
+                <i class="fas fa-coins text-7xl text-gold-400 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-bounce" style="color: #fbbf24;"></i>
+                <i class="fas fa-chart-line text-5xl text-green-400 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-40 animate-pulse mt-8"></i>
+            </div>
+            
+            <h2 class="text-2xl text-green-300 font-sci tracking-widest mb-2 font-bold uppercase">Colegio Lomascheski — Economía - 1ro Secundaria</h2>
+            <h1 class="text-5xl md:text-7xl font-bold font-sci bg-clip-text text-transparent bg-gradient-to-r from-green-400 via-emerald-400 to-gold-400 mb-6 drop-shadow-lg tracking-tight" style="background-image: linear-gradient(to right, #4ade80, #fbbf24, #10b981);">
+                EDUCACIÓN FINANCIERA
+            </h1>
+            <p class="text-xl text-gray-300 mb-10 tracking-wider font-light max-w-2xl leading-relaxed">
+                El Misterio del Ahorro y Gestión del Dinero.<br> Responde 10 preguntas, obtén <span class="text-green-400 font-bold">+10 puntos</span> por acierto.
+            </p>
+            
+            <button onclick="startQuiz()" onmouseenter="SoundEngine.playHover()" class="btn-neon font-sci font-bold text-2xl py-4 px-12 rounded-full flex items-center gap-4 group">
+                <span>INICIAR SIMULACIÓN</span>
+                <i class="fas fa-arrow-trend-up group-hover:translate-x-2 group-hover:-translate-y-2 transition-transform duration-300"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- PANTALLA DEL CUESTIONARIO -->
+    <div id="screen-quiz" class="screen flex-col w-full h-full z-10 p-4 md:p-8">
+        
+        <!-- Header / Stats -->
+        <header class="glass-panel rounded-2xl p-4 flex flex-wrap justify-between items-center mb-4 gap-4">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-full bg-green-900/50 flex items-center justify-center border border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.6)]">
+                    <i class="fas fa-piggy-bank text-2xl text-green-400 animate-pulse"></i>
+                </div>
+                <div class="flex flex-col">
+                    <span class="font-sci text-3xl font-bold tracking-widest bg-clip-text text-transparent bg-gradient-to-r from-green-400 to-gold-400 leading-none" style="background-image: linear-gradient(to right, #4ade80, #fbbf24);">ECONO-LAB</span>
+                    <span id="streak-counter" class="text-sm font-sci text-gray-500 font-bold transition-all duration-300">RACHA: x0</span>
+                </div>
+            </div>
+            
+            <div class="flex flex-wrap gap-3 md:gap-6 font-sci text-xl font-semibold text-gray-300">
+                <div class="flex flex-col items-center bg-slate-800/80 px-4 py-2 rounded-xl border border-slate-600 shadow-inner">
+                    <span class="text-[10px] text-green-400 uppercase tracking-widest mb-1"><i class="fas fa-list-ol mr-1"></i> Análisis</span>
+                    <span id="stat-question" class="text-xl text-white font-bold">1/10</span>
+                </div>
+                <div id="score-container" class="flex flex-col items-center bg-slate-800/80 px-4 py-2 rounded-xl border border-slate-600 shadow-inner transition-colors duration-300">
+                    <span class="text-[10px] text-gold-400 uppercase tracking-widest mb-1" style="color:#fbbf24"><i class="fas fa-star mr-1"></i> Capital</span>
+                    <span id="stat-score" class="text-xl text-white font-bold">0</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Barra de progreso Global -->
+        <div class="w-full bg-slate-800/80 rounded-full h-2 mb-4 border border-slate-600 overflow-hidden relative shadow-inner">
+            <div id="progress-bar" class="h-full bg-gradient-to-r from-green-500 via-emerald-500 to-gold-500 transition-all duration-700 ease-out" style="width: 10%; background-image: linear-gradient(to right, #22c55e, #10b981, #fbbf24);"></div>
+        </div>
+
+        <!-- Barra de Tiempo (Presión Dinámica) -->
+        <div class="w-full bg-slate-900 rounded-full h-1.5 mb-6 overflow-hidden shadow-inner">
+            <div id="timer-bar" class="h-full bg-green-400 w-full shadow-[0_0_10px_rgba(34,197,94,0.8)]"></div>
+        </div>
+
+        <!-- Contenedor Principal (Pregunta y Opciones) -->
+        <main class="flex-1 flex flex-col max-w-6xl mx-auto w-full gap-6 relative z-10 pb-24"> 
+            
+            <!-- Pregunta -->
+            <div class="glass-panel p-8 md:p-10 rounded-2xl border-l-4 border-l-green-400 relative shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
+                <div id="topic-badge" class="absolute -top-4 left-8 bg-slate-900 border border-green-500 text-green-400 text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-widest font-sci shadow-[0_0_15px_rgba(34,197,94,0.4)] flex items-center gap-2">
+                    <i class="fas fa-wallet"></i> <span id="topic-text">Tema</span>
+                </div>
+                <!-- Text Scramble Container -->
+                <h2 id="question-text" class="text-2xl md:text-3xl font-semibold leading-relaxed mt-3 text-white font-inter scramble-text min-h-[80px]">
+                    Procesando transacción de conocimientos...
+                </h2>
+            </div>
+
+            <!-- Opciones -->
+            <div id="options-container" class="grid grid-cols-1 md:grid-cols-2 gap-5 flex-1">
+                <!-- Generado por JS -->
+            </div>
+
+        </main>
+    </div>
+
+    <!-- PANTALLA FINAL (RESULTADOS) -->
+    <div id="screen-results" class="screen flex-col items-center justify-center w-full h-full p-4 md:p-8 z-10">
+        <div class="glass-panel p-8 md:p-12 rounded-3xl max-w-5xl w-full flex flex-col items-center text-center overflow-y-auto no-scrollbar max-h-full relative">
+            
+            <div class="absolute inset-0 overflow-hidden rounded-3xl z-[-1] opacity-20 bg-gradient-to-b from-green-600 to-slate-900 mix-blend-overlay"></div>
+
+            <div class="relative w-32 h-32 mb-4 flex items-center justify-center">
+                <div class="absolute inset-0 border-4 border-dashed border-gold-400 rounded-full animate-[spin_10s_linear_infinite]" style="border-color: #fbbf24;"></div>
+                <i class="fas fa-sack-dollar text-6xl text-gold-400 drop-shadow-[0_0_20px_rgba(251,191,36,0.8)]" style="color: #fbbf24;"></i>
+            </div>
+            
+            <h1 class="text-5xl font-bold font-sci text-white mb-2 tracking-wider drop-shadow-md">AUDITORÍA COMPLETADA</h1>
+            
+            <div id="final-rank" class="text-3xl font-sci text-green-400 mb-8 font-bold bg-slate-900/80 px-8 py-2 rounded-full border border-green-500/50">
+                Calculando patrimonio de conocimientos...
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 w-full mb-10">
+                <div class="bg-gradient-to-br from-slate-800 to-slate-900 p-6 rounded-2xl border border-slate-600 flex flex-col items-center shadow-lg relative overflow-hidden transition-transform hover:scale-105">
+                    <div class="absolute -right-4 -top-4 text-slate-700 opacity-20 text-6xl"><i class="fas fa-star"></i></div>
+                    <span class="text-green-400 font-sci uppercase tracking-widest text-sm mb-2 z-10">Capital Final</span>
+                    <span id="final-score" class="text-5xl font-bold text-white z-10">0<span class="text-xl text-gray-500">/100</span></span>
+                </div>
+                <div class="bg-gradient-to-br from-slate-800 to-slate-900 p-6 rounded-2xl border border-slate-600 flex flex-col items-center shadow-lg relative overflow-hidden transition-transform hover:scale-105">
+                    <div class="absolute -right-4 -top-4 text-slate-700 opacity-20 text-6xl"><i class="fas fa-check-double"></i></div>
+                    <span class="text-emerald-400 font-sci uppercase tracking-widest text-sm mb-2 z-10">Inversiones Exitosas</span>
+                    <span id="final-hits" class="text-5xl font-bold text-white z-10">0<span class="text-xl text-gray-500">/10</span></span>
+                </div>
+                <div class="bg-gradient-to-br from-slate-800 to-slate-900 p-6 rounded-2xl border border-slate-600 flex flex-col items-center shadow-lg relative overflow-hidden transition-transform hover:scale-105">
+                    <div class="absolute -right-4 -top-4 text-slate-700 opacity-20 text-6xl"><i class="fas fa-fire"></i></div>
+                    <span class="text-orange-400 font-sci uppercase tracking-widest text-sm mb-2 z-10">Mejor Rendimiento</span>
+                    <span id="final-streak" class="text-5xl font-bold text-white z-10">x0</span>
+                </div>
+            </div>
+
+            <button onclick="location.reload()" onmouseenter="SoundEngine.playHover()" class="mt-4 btn-neon font-sci font-bold text-xl py-4 px-12 rounded-full flex items-center gap-3 group">
+                <i class="fas fa-sync-alt group-hover:rotate-180 transition-transform duration-500"></i> REINICIAR EJERCICIO
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL DE RETROALIMENTACIÓN -->
+    <div id="feedback-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[60] hidden flex-col items-center justify-center p-4">
+        <div class="absolute inset-0 overflow-hidden pointer-events-none">
+            <div id="modal-glow" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-green-500/20 rounded-full filter blur-[120px] transition-colors duration-500"></div>
+        </div>
+
+        <div id="feedback-panel" class="glass-panel p-8 md:p-10 rounded-2xl max-w-3xl w-full border-t-4 flex flex-col transition-all transform translate-y-12 opacity-0 duration-500 shadow-[0_30px_60px_rgba(0,0,0,0.9)] relative z-10">
+            
+            <div class="flex items-start gap-5 mb-6 border-b border-slate-700/50 pb-5">
+                <div id="feedback-icon" class="text-5xl shrink-0 mt-1"></div>
+                <div class="flex-1">
+                    <p id="feedback-points" class="text-green-400 text-sm mb-1 uppercase tracking-widest font-sci font-bold"></p>
+                    <h3 id="feedback-title" class="text-3xl font-sci font-bold uppercase tracking-wide"></h3>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <div class="bg-slate-900/60 p-4 rounded-xl border-l-4 border-slate-500 mb-5 font-inter">
+                    <p class="text-xs text-gray-400 uppercase tracking-wider font-sci mb-1">Tu selección:</p>
+                    <p id="feedback-selected" class="text-md text-white font-medium italic"></p>
+                </div>
+                
+                <div class="relative pl-4 border-l-2 border-slate-600/50">
+                    <p id="feedback-explanation" class="text-lg md:text-xl leading-relaxed text-gray-300 font-inter font-light">
+                        Explicación detallada...
+                    </p>
+                </div>
+            </div>
+
+            <button onclick="nextQuestion()" onmouseenter="SoundEngine.playHover()" id="btn-continue" class="self-end bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-sci font-bold text-xl py-3 px-8 rounded-full transition-all shadow-[0_0_15px_rgba(34,197,94,0.4)] hover:shadow-[0_0_25px_rgba(34,197,94,0.8)] hover:scale-105 flex items-center gap-2 group">
+            CONTINUAR <i class="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+        </button>
+    </div>
+</div>
+
+<script>
+    // Lógica del Fondo Dinámico Financiero (Gráficos y Monedas)
+    function initNativeFinanceBackground() {
+        const canvas = document.getElementById('finance-canvas');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        let time = 0;
+        const symbols = ['$', '%', 'S/', '€'];
+        const floatingSymbols = Array.from({length: 30}).map(() => ({
+            x: Math.random() * width,
+            y: Math.random() * height,
+            speed: 0.3 + Math.random() * 0.7,
+            char: symbols[Math.floor(Math.random() * symbols.length)],
+            size: 14 + Math.random() * 24,
+            opacity: 0.05 + Math.random() * 0.15
+        }));
+
+        // Barras de crecimiento económico de fondo
+        const bars = Array.from({length: 10}).map((_, i) => ({
+            x: 0,
+            baseHeight: 50 + Math.random() * 150,
+            phase: Math.random() * Math.PI * 2,
+            speed: 0.01 + Math.random() * 0.02
+        }));
+
+        function animate() {
+            ctx.clearRect(0, 0, width, height);
+            
+            // Dibujar gráfico de barras animado en el fondo
+            const barWidth = width / 12;
+            bars.forEach((bar, i) => {
+                bar.x = barWidth * i + barWidth;
+                let currentHeight = bar.baseHeight + Math.sin(time * bar.speed + bar.phase) * 50;
+                
+                let gradient = ctx.createLinearGradient(0, height, 0, height - currentHeight);
+                gradient.addColorStop(0, 'rgba(34, 197, 94, 0)');
+                gradient.addColorStop(1, 'rgba(34, 197, 94, 0.15)');
+                
+                ctx.fillStyle = gradient;
+                ctx.fillRect(bar.x - barWidth/3, height - currentHeight, barWidth/1.5, currentHeight);
+            });
+
+            // Renderizando símbolos flotantes
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            floatingSymbols.forEach(p => {
+                ctx.fillStyle = `rgba(251, 191, 36, ${p.opacity})`;
+                ctx.font = `bold ${p.size}px 'Rajdhani', sans-serif`;
+                ctx.fillText(p.char, p.x, p.y);
+                p.y -= p.speed;
+                if(p.y < -50) {
+                    p.y = height + 50;
+                    p.x = Math.random() * width;
+                }
+            });
+
+            time += 1;
+            requestAnimationFrame(animate);
+        }
+        animate();
+    }
+    initNativeFinanceBackground();
+
+    // Inicializando Sistema de Sonido Interactivo Avanzado (Tone.js)
+    const SoundEngine = {
+        synth: null,       
+        hoverSynth: null,  
+        clickSynth: null,  
+        tickSynth: null,   
+        
+        init: async function() {
+            await Tone.start();
+            
+            this.synth = new Tone.PolySynth(Tone.Synth).toDestination();
+            this.synth.volume.value = -12; 
+            
+            this.hoverSynth = new Tone.Synth({
+                oscillator: { type: "sine" },
+                envelope: { attack: 0.01, decay: 0.1, sustain: 0, release: 0.1 }
+            }).toDestination();
+            this.hoverSynth.volume.value = -20;
+            
+            this.clickSynth = new Tone.MembraneSynth().toDestination();
+            this.clickSynth.volume.value = -15;
+
+            this.tickSynth = new Tone.MetalSynth({
+                frequency: 200, envelope: { attack: 0.001, decay: 0.1, release: 0.01 },
+                harmonicity: 5.1, modulationIndex: 32, resonance: 4000, octaves: 1.5
+            }).toDestination();
+            this.tickSynth.volume.value = -25;
+        },
+        playHover: function() {
+            if(this.hoverSynth && Tone.context.state === 'running') {
+                this.hoverSynth.triggerAttackRelease("C6", "32n");
+            }
+        },
+        playClick: function() {
+            if(this.clickSynth && Tone.context.state === 'running') {
+                this.clickSynth.triggerAttackRelease("C3", "16n");
+            }
+        },
+        playTick: function() {
+            if(this.tickSynth && Tone.context.state === 'running') {
+                this.tickSynth.triggerAttackRelease("32n");
+            }
+        },
+        playCorrect: function() {
+            if(!this.synth) return;
+            const now = Tone.now();
+            this.synth.triggerAttackRelease("C5", "16n", now);
+            this.synth.triggerAttackRelease("E5", "16n", now + 0.1);
+            this.synth.triggerAttackRelease("G5", "8n", now + 0.2);
+        },
+        playIncorrect: function() {
+            if(!this.synth) return;
+            const now = Tone.now();
+            this.synth.triggerAttackRelease("D4", "8n", now);
+            this.synth.triggerAttackRelease("A3", "4n", now + 0.15);
+        },
+        playCombo: function() {
+            if(!this.synth) return;
+            const now = Tone.now();
+            this.synth.triggerAttackRelease("C5", "16n", now);
+            this.synth.triggerAttackRelease("G5", "16n", now + 0.1);
+            this.synth.triggerAttackRelease("C6", "8n", now + 0.2);
+            this.synth.triggerAttackRelease("E6", "4n", now + 0.3);
+        }
+    };
+
+    // Efectos Visuales Complementarios
+    function fireConfetti(isCombo = false) {
+        var duration = isCombo ? 4000 : 2000;
+        var end = Date.now() + duration;
+        var colors = isCombo ? ['#f97316', '#fbbf24', '#22c55e'] : ['#22c55e', '#10b981', '#fbbf24'];
+
+        (function frame() {
+            confetti({ particleCount: isCombo? 5 : 3, angle: 60, spread: 55, origin: { x: 0 }, colors: colors, zIndex: 1000 });
+            confetti({ particleCount: isCombo? 5 : 3, angle: 120, spread: 55, origin: { x: 1 }, colors: colors, zIndex: 1000 });
+            if (Date.now() < end) requestAnimationFrame(frame);
+        }());
+    }
+
+    function scrambleText(element, finalString, duration = 800) {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$%&@#';
+        let start = Date.now();
+        element.classList.add('text-green-400');
+        
+        let interval = setInterval(() => {
+            let elapsed = Date.now() - start;
+            if (elapsed > duration) {
+                clearInterval(interval);
+                element.innerHTML = finalString;
+                element.classList.remove('text-green-400');
+                return;
+            }
+            element.innerHTML = finalString.split('').map(char => {
+                if (char === ' ' || char === '?' || char === '¿') return char;
+                return Math.random() > (elapsed / duration) ? chars[Math.floor(Math.random() * chars.length)] : char;
+            }).join('');
+        }, 30);
+    }
+
+    // Configurando ECONO-Bot
+    const evoBot = {
+        element: document.getElementById('speech-bubble'),
+        eyes: document.getElementById('robot-eyes'),
+        say: function(text, type = 'normal', duration = 5000) {
+            this.element.innerHTML = text;
+            this.element.classList.add('active');
+            
+            const colors = { 'correct': '#10b981', 'error': '#ef4444', 'combo': '#f97316', 'normal': '#fbbf24' };
+            const color = colors[type];
+            
+            this.element.style.borderColor = color;
+            this.element.style.boxShadow = `0 0 20px ${color}66`;
+            this.eyes.querySelectorAll('.robot-eye').forEach(eye => {
+                eye.setAttribute('fill', color);
+                eye.style.boxShadow = `0 0 10px ${color}`;
+            });
+
+            if(this.hideTimeout) clearTimeout(this.hideTimeout);
+            if(duration > 0) {
+                this.hideTimeout = setTimeout(() => {
+                    this.element.classList.remove('active');
+                    this.eyes.querySelectorAll('.robot-eye').forEach(eye => eye.setAttribute('fill', '#fbbf24'));
+                }, duration);
+            }
+        },
+        poke: function() {
+            const phrases = [
+                "¿Sabías que un centavo ahorrado es un centavo ganado?",
+                "Procesando tasas de interés... ¡Tus decisiones generan valor!",
+                "Mantén estables tus finanzas y aleja los gastos impulsivos."
+            ];
+            this.say(`<i class="fas fa-info-circle mr-2"></i> ${phrases[Math.floor(Math.random() * phrases.length)]}`, 'normal', 4000);
+            SoundEngine.playHover();
+        }
+    };
+
+    // Base de Datos de 10 Preguntas de Economía extraídas de los videos
+    const questionsDB = [
+        { 
+            topic: "Concepto de Ahorro", level: "Básico", 
+            question: "Según los videos, ¿qué es fundamentalmente el ahorro?", 
+            options: [ 
+                { text: "A) Guardar dinero para usarlo en el futuro", isCorrect: true, feedback: "Ahorrar es el hábito de separar una porción de tus ingresos para asegurar tu estabilidad económica futura." }, 
+                { text: "B) Invertir todo el dinero en la bolsa de valores", isCorrect: false, feedback: "La inversión es un paso posterior; el ahorro es guardar de forma segura." }, 
+                { text: "C) Pedir préstamos al banco para comprar cosas", isCorrect: false, feedback: "Eso es adquirir deuda, que es lo contrario al hábito de ahorrar." }, 
+                { text: "D) Gastar menos comprando cosas de mala calidad", isCorrect: false, feedback: "Se trata de guardar dinero intencionalmente, no solo comprar barato." } 
+            ] 
+        },
+        { 
+            topic: "Beneficios", level: "Intermedio", 
+            question: "¿Cuál de las siguientes es una ventaja directa de tener ahorros?", 
+            options: [ 
+                { text: "A) Brinda seguridad ante eventos inesperados o emergencias", isCorrect: true, feedback: "Los ahorros te protegen frente a imprevistos y también permiten disfrutar como ir de vacaciones." }, 
+                { text: "B) Te permite evitar el pago de impuestos anuales", isCorrect: false, feedback: "El ahorro no exime las responsabilidades tributarias." }, 
+                { text: "C) Garantiza que nunca tendrás que trabajar de nuevo", isCorrect: false, feedback: "A menos que sea una fortuna, el ahorro es un respaldo, no un reemplazo permanente del trabajo." }, 
+                { text: "D) Multiplica el dinero mágicamente sin esfuerzo", isCorrect: false, feedback: "El dinero ahorrado debe ser gestionado adecuadamente, no se multiplica por arte de magia." } 
+            ] 
+        },
+        { 
+            topic: "Planificación", level: "Básico", 
+            question: "¿Qué herramienta necesitas elaborar para saber exactamente cuánto dinero puedes ahorrar?", 
+            options: [ 
+                { text: "A) Un presupuesto", isCorrect: true, feedback: "El presupuesto permite registrar ingresos y gastos para identificar qué cantidad puedes destinar al ahorro." }, 
+                { text: "B) Una lista de regalos", isCorrect: false, feedback: "Esto solo fomentaría el gasto sin control." }, 
+                { text: "C) Un catálogo de productos", isCorrect: false, feedback: "Esto es material para fomentar compras, no para planificar ahorros." }, 
+                { text: "D) Un préstamo bancario", isCorrect: false, feedback: "Un préstamo significa obtener dinero prestado con intereses, no organizar el tuyo." } 
+            ] 
+        },
+        { 
+            topic: "Tipos de Ahorro", level: "Avanzado", 
+            question: "¿Cuál es un riesgo principal del 'ahorro informal' (como guardarlo bajo el colchón)?", 
+            options: [ 
+                { text: "A) La tentación de gastarlo fácilmente o sufrir un robo", isCorrect: true, feedback: "Al tener el dinero físico en casa o en métodos informales, es más fácil ser víctima de la delincuencia o gastarlo por impulso." }, 
+                { text: "B) El cobro excesivo de comisiones bancarias", isCorrect: false, feedback: "Esto aplicaría (si las hubiera) al ahorro formal en instituciones financieras, no al informal." }, 
+                { text: "C) Que el dinero se devalúe de un día para otro", isCorrect: false, feedback: "La inflación afecta, pero el riesgo inmediato del método informal es la pérdida física o el gasto." }, 
+                { text: "D) Que el banco central lo confisque", isCorrect: false, feedback: "Es un mito sin fundamento en este contexto educativo." } 
+            ] 
+        },
+        { 
+            topic: "Casos Prácticos", level: "Intermedio", 
+            question: "En la historia de Sofía y Torito, ¿cómo decidieron juntar dinero para comprar la muñeca?", 
+            options: [ 
+                { text: "A) Haciendo y vendiendo manualidades con materiales reciclados", isCorrect: true, feedback: "Generaron ingresos utilizando cajas y botellas para crear pulseras y cuadros, demostrando creatividad." }, 
+                { text: "B) Pidiendo un préstamo a sus padres con intereses", isCorrect: false, feedback: "Torito les aconsejó trabajar en equipo y crear sus propios ingresos." }, 
+                { text: "C) Trabajando en la tienda de juguetes por las tardes", isCorrect: false, feedback: "Ellos emprendieron su propio pequeño negocio en casa." }, 
+                { text: "D) Usando la tarjeta de crédito de su mamá", isCorrect: false, feedback: "El objetivo era enseñarles el valor de ahorrar con su propio esfuerzo." } 
+            ] 
+        },
+        { 
+            topic: "Herramientas", level: "Intermedio", 
+            question: "Según Torito, ¿por qué es útil usar una alcancía con dos ranuras?", 
+            options: [ 
+                { text: "A) Para separar el dinero de la meta de ahorros y el de los gustitos", isCorrect: true, feedback: "Ayuda a organizar el dinero para no sacrificar tu objetivo a largo plazo por un antojo temporal." }, 
+                { text: "B) Para guardar monedas de un sol y de cinco soles por separado", isCorrect: false, feedback: "El valor de la moneda no es tan importante como el propósito de la separación." }, 
+                { text: "C) Para que el dinero no haga ruido al mover la alcancía", isCorrect: false, feedback: "La separación es conceptual y financiera, no acústica." }, 
+                { text: "D) Para esconder el dinero de posibles ladrones", isCorrect: false, feedback: "Ambas ranuras guardan dinero, ninguna es para engañar ladrones." } 
+            ] 
+        },
+        { 
+            topic: "Consecuencias", level: "Básico", 
+            question: "¿Qué problema físico y financiero ocasionó que Sofía no separara dinero para sus 'gustitos'?", 
+            options: [ 
+                { text: "A) Tomó dinero de los ahorros para comprar dulces y se enfermó de una muela", isCorrect: true, feedback: "Al no controlar su tentación, gastó el ahorro, retrasó su meta y afectó su salud." }, 
+                { text: "B) Se quedó sin materiales para hacer más manualidades", isCorrect: false, feedback: "El problema fue el gasto de los fondos, no la falta de material." }, 
+                { text: "C) Su hermano Sebastián se enojó y rompió la alcancía", isCorrect: false, feedback: "Sus hermanos la ayudaron y Torito investigó el caso amigablemente." }, 
+                { text: "D) La vendedora subió el precio de la muñeca a 50 soles", isCorrect: false, feedback: "El precio se mantuvo, el problema fue interno de la gestión del equipo." } 
+            ] 
+        },
+        { 
+            topic: "Reglas de Oro", level: "Avanzado", 
+            question: "¿Cuáles son las dos grandes reglas de oro del ahorro mencionadas en el primer video?", 
+            options: [ 
+                { text: "A) Gasta menos de lo que ganas y ahorra constantemente todos los días", isCorrect: true, feedback: "La disciplina constante y evitar gastar por encima de tus ingresos son las claves del éxito financiero." }, 
+                { text: "B) Ahorra todo lo que ganas y no gastes absolutamente nada", isCorrect: false, feedback: "Es imposible no tener gastos básicos; el ahorro debe ser equilibrado." }, 
+                { text: "C) Pide prestado para invertir y paga las deudas después", isCorrect: false, feedback: "Las deudas no son una regla para el ahorro seguro y responsable." }, 
+                { text: "D) Gasta lo mismo que ganas y ahorra solo lo que sobre a fin de año", isCorrect: false, feedback: "El ahorro debe planificarse, no dejarse a la suerte de 'lo que sobre'." } 
+            ] 
+        },
+        { 
+            topic: "Moraleja", level: "Intermedio", 
+            question: "¿Qué nos enseña la historia de la alcancía de Sofía sobre las tentaciones de gasto?", 
+            options: [ 
+                { text: "A) Que separar inteligentemente el dinero evita la tentación de gastar los ahorros", isCorrect: true, feedback: "Al destinar un fondo específico para gustos, se protege el capital principal de la meta." }, 
+                { text: "B) Que las tentaciones desaparecen por completo cuando uno crece", isCorrect: false, feedback: "Las tentaciones de gasto existen a cualquier edad." }, 
+                { text: "C) Que es mejor gastar en tentaciones antes de empezar a ahorrar", isCorrect: false, feedback: "El ahorro debe ser prioritario, no la última opción." }, 
+                { text: "D) Que comprar dulces siempre es una buena inversión a corto plazo", isCorrect: false, feedback: "Los dulces son un gasto de consumo, no una inversión." } 
+            ] 
+        },
+        { 
+            topic: "Actitud", level: "Básico", 
+            question: "¿Qué actitud es considerada indispensable para lograr nuestras metas de ahorro a largo plazo?", 
+            options: [ 
+                { text: "A) Ser disciplinado y muy perseverante", isCorrect: true, feedback: "El ahorro requiere constancia, resistencia a los impulsos y mantener la vista en la meta." }, 
+                { text: "B) Ser impulsivo y tomar riesgos constantes con el dinero", isCorrect: false, feedback: "La impulsividad es enemiga de la estabilidad financiera." }, 
+                { text: "C) Depender exclusivamente de la suerte para obtener ganancias", isCorrect: false, feedback: "El ahorro depende del esfuerzo y la planificación, no de la suerte." }, 
+                { text: "D) Guardar el dinero en secreto sin decirle jamás a la familia", isCorrect: false, feedback: "El trabajo en equipo y los acuerdos familiares fortalecen el ahorro grupal." } 
+            ] 
+        }
+    ];
+
+    let currentQIndex = 0;
+    let score = 0;
+    let hits = 0;
+    let streak = 0;
+    let maxStreak = 0;
+    let timeRemaining = 20;
+    let timerInterval;
+    let shuffledQuestions = [];
+
+    function startTimer() {
+        timeRemaining = 20;
+        const timerBar = document.getElementById('timer-bar');
+        timerBar.style.width = '100%';
+        timerBar.className = 'h-full bg-green-400 w-full transition-all duration-1000 ease-linear shadow-[0_0_10px_rgba(34,197,94,0.8)]';
+        
+        clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+            timeRemaining--;
+            let pct = (timeRemaining / 20) * 100;
+            timerBar.style.width = pct + '%';
+            
+            if(timeRemaining <= 5 && timeRemaining > 0) {
+                timerBar.classList.replace('bg-green-400', 'bg-red-500');
+                timerBar.classList.replace('shadow-[0_0_10px_rgba(34,197,94,0.8)]', 'shadow-[0_0_10px_rgba(239,68,68,0.8)]');
+                timerBar.parentElement.classList.add('animate-pulse');
+                SoundEngine.playTick(); 
+            }
+            if(timeRemaining <= 0) {
+                clearInterval(timerInterval);
+                timerBar.parentElement.classList.remove('animate-pulse');
+            }
+        }, 1000);
+    }
+    
+    function stopTimer() {
+        clearInterval(timerInterval);
+        document.getElementById('timer-bar').parentElement.classList.remove('animate-pulse');
+    }
+
+    function applyTiltEffect(element) {
+        element.addEventListener('mousemove', (e) => {
+            const rect = element.getBoundingClientRect();
+            const x = e.clientX - rect.left; 
+            const y = e.clientY - rect.top;
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+            
+            const rotateX = ((y - centerY) / centerY) * -10; 
+            const rotateY = ((x - centerX) / centerX) * 10;
+            
+            element.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
+        });
+        element.addEventListener('mouseleave', () => {
+            element.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)`;
+        });
+    }
+
+    async function startQuiz() {
+        SoundEngine.playClick();
+        await SoundEngine.init(); 
+        
+        document.getElementById('screen-intro').classList.remove('active');
+        
+        setTimeout(() => {
+            document.getElementById('screen-intro').style.display = 'none';
+            const quizScreen = document.getElementById('screen-quiz');
+            quizScreen.style.display = 'flex';
+            void quizScreen.offsetWidth;
+            quizScreen.classList.add('active');
+            
+            // Randomizar Opciones y Preguntas
+            shuffledQuestions = questionsDB.sort(() => 0.5 - Math.random()).map(q => ({
+                ...q, options: q.options.sort(() => 0.5 - Math.random())
+            }));
+            
+            evoBot.say("Análisis de mercado en línea. Recuerda: +10 de capital por cada acierto.", 'normal');
+            loadQuestion();
+        }, 500); 
+    }
+
+    function loadQuestion() {
+        const q = shuffledQuestions[currentQIndex];
+        
+        document.getElementById('stat-question').textContent = `${currentQIndex + 1}/10`;
+        document.getElementById('progress-bar').style.width = `${((currentQIndex) / 10) * 100}%`;
+        
+        document.getElementById('topic-text').innerHTML = `${q.topic} <span class="ml-2 px-2 py-0.5 bg-slate-800 text-[10px] rounded border border-slate-600">${q.level}</span>`;
+        
+        const qText = document.getElementById('question-text');
+        scrambleText(qText, q.question, 1000); 
+        
+        const optCont = document.getElementById('options-container');
+        optCont.innerHTML = '';
+        
+        q.options.forEach((opt, index) => {
+            let cleanText = opt.text.replace(/^[A-D]\) /, '');
+            let letter = String.fromCharCode(65 + index);
+            
+            const btn = document.createElement('div');
+            btn.className = `option-card p-5 rounded-2xl flex items-center gap-4 opacity-0 transform translate-y-8`;
+            btn.style.transition = `background 0.3s, border-color 0.3s, box-shadow 0.3s, opacity 0.4s ease ${index * 0.15}s, transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) ${index * 0.15}s`;
+            
+            btn.innerHTML = `
+                <div class="option-content flex items-center gap-4 w-full pointer-events-none">
+                    <div class="w-12 h-12 rounded-full bg-slate-800/80 border border-slate-500 flex items-center justify-center font-sci font-bold text-2xl text-green-400 shrink-0 shadow-inner group-hover:bg-green-400 group-hover:text-slate-900 transition-colors">
+                        ${letter}
+                    </div>
+                    <p class="text-[17px] text-gray-200 font-inter leading-tight">${cleanText}</p>
+                </div>
+            `;
+            
+            applyTiltEffect(btn);
+            btn.onmouseenter = () => SoundEngine.playHover();
+            btn.onclick = (e) => selectOption(btn, opt, cleanText, e);
+            optCont.appendChild(btn);
+            
+            setTimeout(() => {
+                btn.classList.remove('opacity-0', 'translate-y-8');
+                setTimeout(()=> { btn.style.transition = `background 0.3s, border-color 0.3s, box-shadow 0.3s, transform 0.1s`; }, 400);
+            }, 50);
+        });
+
+        startTimer();
+    }
+
+    function selectOption(btnElement, optData, cleanText, event) {
+        SoundEngine.playClick();
+        stopTimer();
+        
+        const allOpts = document.getElementById('options-container').children;
+        for(let opt of allOpts) opt.classList.add('disabled');
+
+        if(optData.isCorrect) {
+            btnElement.classList.remove('disabled');
+            btnElement.classList.add('selected-correct');
+            
+            score += 10;
+            hits++;
+            streak++;
+            if(streak > maxStreak) maxStreak = streak;
+            
+            const streakCounter = document.getElementById('streak-counter');
+            streakCounter.textContent = `RACHA: x${streak}`;
+            if(streak >= 3) {
+                streakCounter.classList.add('streak-active');
+                SoundEngine.playCombo();
+                fireConfetti(true);
+                evoBot.say(`¡UTILIDAD x${streak}! Tu precisión financiera es impecable.`, 'combo', 3000);
+            } else {
+                SoundEngine.playCorrect();
+                fireConfetti();
+            }
+            
+            document.getElementById('feedback-points').innerHTML = `<span class="text-green-400 font-bold">+10 Capital</span>`;
+            setupModal(true, cleanText, optData.feedback);
+            
+        } else {
+            btnElement.classList.remove('disabled');
+            btnElement.classList.add('selected-incorrect');
+            streak = 0;
+            document.getElementById('streak-counter').textContent = `RACHA: x0`;
+            document.getElementById('streak-counter').classList.remove('streak-active');
+            
+            SoundEngine.playIncorrect();
+            document.getElementById('feedback-points').innerHTML = `<span class="text-red-400 font-bold">0 Capital</span>`;
+            setupModal(false, cleanText, optData.feedback);
+            
+            if(Math.random() > 0.4) evoBot.say("Pérdida detectada. Analiza la explicación para recuperar tus finanzas en el próximo intento.", 'error', 5000);
+        }
+
+        document.getElementById('stat-score').textContent = score;
+    }
+
+    function setupModal(isCorrect, selectedText, explanation) {
+        const modal = document.getElementById('feedback-modal');
+        const panel = document.getElementById('feedback-panel');
+        const glow = document.getElementById('modal-glow');
+        
+        document.getElementById('feedback-selected').textContent = selectedText;
+        document.getElementById('feedback-explanation').innerHTML = explanation;
+        
+        if(isCorrect) {
+            document.getElementById('feedback-icon').innerHTML = '<i class="fas fa-check-circle text-green-400 drop-shadow-[0_0_20px_rgba(74,222,128,0.8)]"></i>';
+            document.getElementById('feedback-title').textContent = 'ACIERTO FINANCIERO';
+            document.getElementById('feedback-title').className = 'text-3xl font-sci font-bold text-green-400';
+            panel.style.borderTopColor = '#4ade80';
+            glow.style.backgroundColor = 'rgba(74, 222, 128, 0.15)';
+        } else {
+            document.getElementById('feedback-icon').innerHTML = '<i class="fas fa-times-circle text-red-500 drop-shadow-[0_0_20px_rgba(239,68,68,0.8)]"></i>';
+            document.getElementById('feedback-title').textContent = 'QUIEBRA TÉCNICA';
+            document.getElementById('feedback-title').className = 'text-3xl font-sci font-bold text-red-500';
+            panel.style.borderTopColor = '#ef4444';
+            glow.style.backgroundColor = 'rgba(239, 68, 68, 0.15)';
+        }
+        
+        setTimeout(() => {
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => { panel.classList.remove('translate-y-12', 'opacity-0'); }, 10);
+        }, 800);
+    }
+
+    function nextQuestion() {
+        SoundEngine.playClick();
+        const panel = document.getElementById('feedback-panel');
+        panel.classList.add('translate-y-12', 'opacity-0');
+        
+        setTimeout(() => {
+            document.getElementById('feedback-modal').classList.add('hidden');
+            document.getElementById('feedback-modal').classList.remove('flex');
+            
+            currentQIndex++;
+            if(currentQIndex < 10) loadQuestion();
+            else showResults();
+        }, 400); 
+    }
+
+    function showResults() {
+        const quizScreen = document.getElementById('screen-quiz');
+        quizScreen.classList.remove('active');
+        document.getElementById('progress-bar').style.width = `100%`;
+        
+        setTimeout(() => {
+            quizScreen.style.display = 'none';
+            const resScreen = document.getElementById('screen-results');
+            resScreen.style.display = 'flex';
+            void resScreen.offsetWidth;
+            resScreen.classList.add('active');
+
+            if (score >= 80) {
+                SoundEngine.playCombo();
+                fireConfetti(true);
+                setTimeout(()=>fireConfetti(true), 1200); 
+            }
+
+            animateValue("final-score", 0, score, 1500, "/100"); 
+            animateValue("final-hits", 0, hits, 1500, "/10");
+            document.getElementById('final-streak').textContent = `x${maxStreak}`;
+
+            const rankEl = document.getElementById('final-rank');
+            if(score === 100) { 
+                rankEl.innerHTML = "Rango: <span class='text-gold-400' style='color:#fbbf24'>Gurú Financiero 🥇</span>"; 
+                rankEl.style.borderColor = "var(--neon-gold)";
+                evoBot.say("¡Absolutamente brillante! Tienes un futuro millonario.", "correct");
+            } else if(score >= 70) { 
+                rankEl.innerHTML = "Rango: <span class='text-green-400'>Inversionista Inteligente 📊</span>"; 
+                rankEl.style.borderColor = "var(--neon-green)";
+                evoBot.say("Gran administración de tu dinero, muy buen trabajo.", "correct");
+            } else if (score >= 40) {
+                rankEl.innerHTML = "Rango: <span class='text-emerald-400'>Ahorrador Principiante 🥉</span>"; 
+                rankEl.style.borderColor = "var(--neon-emerald)";
+                evoBot.say("Buen inicio, pero necesitas controlar mejor tus gastos.", "normal");
+            } else { 
+                rankEl.innerHTML = "Rango: <span class='text-red-500'>Gastador Compulsivo 💸</span>"; 
+                rankEl.style.borderColor = "#ef4444";
+                evoBot.say("Tus finanzas están en rojo. Requiere repasar los videos urgentemente.", "error");
+            }
+        }, 500);
+    }
+
+    function animateValue(id, start, end, duration, suffix = "") {
+        if (start === end) { document.getElementById(id).innerHTML = end + `<span class="text-xl text-gray-500">${suffix}</span>`; return; }
+        let current = start;
+        let increment = end > start ? (end > 50 ? 5 : 1) : -1;
+        let stepTime = Math.abs(Math.floor(duration / ((end - start)/increment)));
+        let obj = document.getElementById(id);
+        
+        let timer = setInterval(() => {
+            current += increment;
+            if (current >= end) {
+                current = end;
+                clearInterval(timer);
+            }
+            obj.innerHTML = current + `<span class="text-xl text-gray-500">${suffix}</span>`;
+        }, stepTime);
+    }
+</script>
+</body>
+</html>
+```
+
+### Cambios realizados en la aplicación generada:
+1. **Temática Financiera y Diseño**: Cambié los colores sci-fi (cian/violeta) por una paleta de verdes (esmeraldas) y dorados (oro) relacionados a la riqueza y la economía. 
+2. **Iconografía**: Los iconos de ADN y microscopios de FontAwesome fueron reemplazados por chanchitos ahorradores, dinero, gráficos de tendencias (`fa-piggy-bank`, `fa-coins`, `fa-chart-line`, etc.).
+3. **Animación en el Canvas Nativo**: Modifiqué el ADN en 3D que rotaba en el fondo; ahora en su lugar hay un renderizado de barras de crecimiento estilo "acciones" fluctuando lentamente y símbolos económicos ($, %, S/, €) flotando de manera sutil en la pantalla.
+4. **ECONO-Bot:** El robot asistente ahora da retroalimentaciones usando jerga financiera (ej. "¡UTILIDAD x3!", "Quiebra técnica detectada").
+5. **Cuestionario Extrapolado (10 preguntas)**: Extraje exitosamente las premisas de ambos videos, cubriendo los tipos de ahorro, las moralejas de *Torito y el misterio del ahorro*, el uso del presupuesto y las alcancías divisoras. Las alternativas incorrectas se redactaron para ser lógicas pero fundamentadas como erradas mediante la retroalimentación. Y las preguntas proporcionan los solicitados 10 puntos por acierto. 
+
+Todo se encuentra listo para ejecutarse en el navegador abriendo el archivo único.
